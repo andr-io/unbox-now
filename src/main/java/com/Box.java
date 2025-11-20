@@ -211,48 +211,27 @@ public final class Box {
     }
 
     int height(Rotation r) {
-        switch (r) {
-            case R0, R1 -> {
-                return height;
-            }
-            case R2, R3 -> {
-                return width;
-            }
-            case R4, R5 -> {
-                return length;
-            }
-            default -> throw new IllegalStateException("Unexpected value: " + r);
-        }
+        return switch (r) {
+            case R0, R1 -> height;
+            case R2, R3 -> width;
+            case R4, R5 -> length;
+        };
     }
 
     int length(Rotation r) {
-        switch (r) {
-            case R0, R3 -> {
-                return length;
-            }
-            case R1, R5 -> {
-                return width;
-            }
-            case R2, R4 -> {
-                return height;
-            }
-            default -> throw new IllegalStateException("Unexpected value: " + r);
-        }
+        return switch (r) {
+            case R0, R3 -> length;
+            case R1, R5 -> width;
+            case R2, R4 -> height;
+        };
     }
 
     int width(Rotation r) {
-        switch (r) {
-            case R0, R4 -> {
-                return width;
-            }
-            case R1, R2 -> {
-                return length;
-            }
-            case R3, R5 -> {
-                return height;
-            }
-            default -> throw new IllegalStateException("Unexpected value: " + r);
-        }
+        return switch (r) {
+            case R0, R4 -> width;
+            case R1, R2 -> length;
+            case R3, R5 -> height;
+        };
     }
 
     private int getDistinctRotationsCount() {
