@@ -179,13 +179,43 @@ public final class Box {
             }
         }
 
+        // identical boxes -> enforce ordering
+        for (int i = 0; i < n - 1; i++) {
+            Box bi = boxes.get(i);
+            Box bj = boxes.get(i + 1);
+
+            if (Arrays.equals(bi.getDimensionsSortedAsc(), bj.getDimensionsSortedAsc())) {
+                model.lexLessEq(
+                    new IntVar[]{xs[i], ys[i], zs[i]},
+                    new IntVar[]{xs[i+1], ys[i+1], zs[i+1]}
+                ).post();
+            }
+        }
+
         Solver solver = model.getSolver();
 
         if (limitMs != DISABLE_TIME_LIMIT) {
             solver.limitTime(limitMs);
         }
 
-        return solver.solve();
+        boolean solved = solver.solve();
+//        if (solved) {
+//            System.out.println("Solution found:");
+//            for (int i = 0; i < n; i++) {
+//                int xVal = xs[i].getValue();
+//                int yVal = ys[i].getValue();
+//                int zVal = zs[i].getValue();
+//                int wVal = cW[i].getValue();
+//                int hVal = cH[i].getValue();
+//                int lVal = cL[i].getValue();
+//
+//                System.out.printf(
+//                    "Box %d -> (x=%d, y=%d, z=%d), w=%d, h=%d, l=%d%n",
+//                    i, xVal, yVal, zVal, wVal, hVal, lVal
+//                );
+//            }
+//        }
+        return solved;
     }
 
     public int width() {

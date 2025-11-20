@@ -124,6 +124,17 @@ public class Main {
             ),
             false);
 
+        run("20 v2 boxes in 20x20x20, should fit",
+            new Box(20, 20, 20),
+            List.of(
+                new Box(7, 7, 6), new Box(7, 6, 7), new Box(6, 7, 7), new Box(6, 6, 6),
+                new Box(5, 7, 7), new Box(7, 5, 7), new Box(7, 5, 7), new Box(7, 7, 5),
+                new Box(5, 4, 7), new Box(6, 7, 5), new Box(6, 5, 7), new Box(7, 5, 5),
+                new Box(6, 6, 7), new Box(7, 7, 7), new Box(7, 7, 7), new Box(7, 7, 7),
+                new Box(7, 7, 7), new Box(7, 7, 7), new Box(7, 7, 7), new Box(7, 7, 7)
+            ),
+            true);
+
     }
 
     private static void run(String name, Box container, List<Box> items, boolean expected) {
