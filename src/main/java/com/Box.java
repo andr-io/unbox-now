@@ -5,7 +5,9 @@ import org.chocosolver.solver.Solver;
 import org.chocosolver.solver.variables.BoolVar;
 import org.chocosolver.solver.variables.IntVar;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 import static com.Box.Rotation.*;
@@ -95,6 +97,9 @@ public final class Box {
         }
 
         // Bring out the big guns
+        boxes = new ArrayList<>(boxes);
+        boxes.sort(Comparator.comparingLong(Box::volume).reversed());
+
         int n = boxes.size();
         Model model = new Model("Boxes into box");
 
@@ -150,9 +155,9 @@ public final class Box {
 
             rot[i] = model.intVar("rot_" + i, 0, iboxRotationsCount - 1);
 
-            cH[i] = model.intVar("chosenHeight_" + i, ibox.min, ibox.max);
-            cW[i] = model.intVar("chosenWidth_" + i, ibox.min, ibox.max);
-            cL[i] = model.intVar("chosenLength_" + i, ibox.min, ibox.max);
+            cH[i] = model.intVar("chosenHeight_" + i, possibleHeights);
+            cW[i] = model.intVar("chosenWidth_" + i, possibleWidths);
+            cL[i] = model.intVar("chosenLength_" + i, possibleLengths);
 
             model.element(cH[i], possibleHeights, rot[i]).post();
             model.element(cW[i], possibleWidths,  rot[i]).post();
@@ -166,15 +171,13 @@ public final class Box {
 
         for (int i = 0; i < n; i++) {
             for (int j = i + 1; j < n; j++) {
-                model.ifThen(ls[i][j], model.arithm(xs[i], "+", cW[i], "<=", xs[j]));
-                model.ifThen(us[i][j], model.arithm(ys[i], "+", cH[i], "<=", ys[j]));
-                model.ifThen(bs[i][j], model.arithm(zs[i], "+", cL[i], "<=", zs[j]));
+                model.arithm(xs[i], "+", cW[i], "<=", xs[j]).reifyWith(ls[i][j]);
+                model.arithm(ys[i], "+", cH[i], "<=", ys[j]).reifyWith(us[i][j]);
+                model.arithm(zs[i], "+", cL[i], "<=", zs[j]).reifyWith(bs[i][j]);
 
-                model.addClausesAtMostOne(new BoolVar[]{ls[i][j], us[i][j], bs[i][j]});
                 model.addClausesBoolOrArrayEqualTrue(new BoolVar[]{ls[i][j], us[i][j], bs[i][j]});
             }
         }
-
 
         Solver solver = model.getSolver();
 
@@ -187,6 +190,10 @@ public final class Box {
 
     public int width() {
         return width;
+    }
+
+    public long volume() {
+        return volume;
     }
 
     private void validateDimension(int val) {
@@ -203,7 +210,7 @@ public final class Box {
         return length;
     }
 
-     int height(Rotation r) {
+    int height(Rotation r) {
         switch (r) {
             case R0, R1 -> {
                 return height;
@@ -218,7 +225,7 @@ public final class Box {
         }
     }
 
-     int length(Rotation r) {
+    int length(Rotation r) {
         switch (r) {
             case R0, R3 -> {
                 return length;
@@ -233,7 +240,7 @@ public final class Box {
         }
     }
 
-     int width(Rotation r) {
+    int width(Rotation r) {
         switch (r) {
             case R0, R4 -> {
                 return width;
@@ -260,7 +267,7 @@ public final class Box {
         return 6;
     }
 
-    private Rotation[] getDistinctRotations() {
+    Rotation[] getDistinctRotations() {
         if (width == height && height == length) {
             return IDENTITY;
         }
@@ -291,13 +298,5 @@ public final class Box {
         return arr;
     }
 
-    enum Rotation {
-        R0,
-        R1,
-        R2,
-        R3,
-        R4,
-        R5,
-    }
-
+    enum Rotation { R0, R1, R2, R3, R4, R5,}
 }
