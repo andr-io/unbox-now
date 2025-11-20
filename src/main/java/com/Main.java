@@ -3,6 +3,10 @@ package com;
 import java.util.List;
 
 public class Main {
+    private static final String ANSI_RESET  = "\u001B[0m";
+    private static final String ANSI_GREEN  = "\u001B[32m";
+    private static final String ANSI_RED    = "\u001B[31m";
+
     public static void main(String[] args) {
         run("Two slim boxes fit in 10x10x10",
             new Box(10, 10, 10),
@@ -130,7 +134,10 @@ public class Main {
         long end = System.nanoTime();
         long elapsedMs = (end - start) / 1_000_000; // convert to milliseconds
 
-        String verdict = result == expected ? "OK" : "Mismatch";
+        boolean ok = (result == expected);
+        String verdict = ok ? ANSI_GREEN + "OK" + ANSI_RESET
+            : ANSI_RED   + "Mismatch" + ANSI_RESET;
+
         System.out.printf("[%s] -> result=%s, expected=%s => %s (time=%d ms)%n",
             name, result, expected, verdict, elapsedMs);
     }

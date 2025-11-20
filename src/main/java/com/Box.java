@@ -8,10 +8,21 @@ import org.chocosolver.solver.variables.IntVar;
 import java.util.Arrays;
 import java.util.List;
 
+import static com.Box.Rotation.*;
+
 public final class Box {
+    // Config
     private static final int DISABLE_TIME_LIMIT = -1;
-    private static final int BOX_POSSIBLE_ROTATIONS = 6;
-    private static final Rotation[] rotations = Rotation.values();
+
+    // Array rotations
+    private static final Rotation[] ROTATIONS = Rotation.values();
+    private static final Rotation[] IDENTITY = {R0};
+    private static final Rotation[] ROTATIONS_W_EQ_H = {R0, R1, R4};
+    private static final Rotation[] ROTATIONS_W_EQ_L = {R0, R2, R3};
+    private static final Rotation[] ROTATIONS_H_EQ_L = {R0, R1, R3};
+
+    // Caches
+    private final int[] dimSorted;
 
     private final int width;
     private final int height;
@@ -33,11 +44,11 @@ public final class Box {
         this.length = length;
         this.volume = ((long) width) * height * length;
 
-        int[] sorted = sortAsc(width, height, length);
+        dimSorted = sortAsc(width, height, length);
 
-        max = sorted[2];
-        med = sorted[1];
-        min = sorted[0];
+        max = dimSorted[2];
+        med = dimSorted[1];
+        min = dimSorted[0];
     }
 
 
@@ -87,10 +98,10 @@ public final class Box {
         int n = boxes.size();
         Model model = new Model("Boxes into box");
 
-        // Coordinates (boxes should atleast be 1x1x1 so we subtract)
-        IntVar[] xs = model.intVarArray("x", n, 0, width - 1);
-        IntVar[] ys = model.intVarArray("y", n, 0, height - 1);
-        IntVar[] zs = model.intVarArray("z", n, 0, length - 1);
+        // Coordinates at lower left point (regardless of rotation)
+        IntVar[] xs = new IntVar[n];
+        IntVar[] ys = new IntVar[n];
+        IntVar[] zs = new IntVar[n];
 
         // Relative position
         BoolVar[][] ls = new BoolVar[n][];
@@ -98,9 +109,16 @@ public final class Box {
         BoolVar[][] bs = new BoolVar[n][];
 
         for (int i = 0; i < n; i++) {
+            Box ibox = boxes.get(i);
+
             ls[i] = new BoolVar[n];
             us[i] = new BoolVar[n];
             bs[i] = new BoolVar[n];
+
+            xs[i] = model.intVar("x_" + i, 0, width - ibox.min);
+            ys[i] = model.intVar("y_" + i, 0, height - ibox.min);
+            zs[i] = model.intVar("z_" + i, 0, length - ibox.min);
+
             for (int j = i + 1; j < n; j++) {
                 ls[i][j] = model.boolVar("ls_" + i + "_" + j);
                 us[i][j] = model.boolVar("us_" + i + "_" + j);
@@ -114,25 +132,30 @@ public final class Box {
         IntVar[] cH  = new IntVar[n];
         IntVar[] cL  = new IntVar[n];
 
-        for (int i = 0; i < n; i++) {
-            int[] possibleHeights = new int[BOX_POSSIBLE_ROTATIONS];
-            int[] possibleWidths  = new int[BOX_POSSIBLE_ROTATIONS];
-            int[] possibleLengths = new int[BOX_POSSIBLE_ROTATIONS];
 
-            for (int j = 0; j < BOX_POSSIBLE_ROTATIONS; j++) {
-                possibleHeights[j] = boxes.get(i).height(rotations[j]);
-                possibleWidths[j]  = boxes.get(i).width(rotations[j]);
-                possibleLengths[j] = boxes.get(i).length(rotations[j]);
+        for (int i = 0; i < n; i++) {
+            Box ibox = boxes.get(i);
+            int iboxRotationsCount = ibox.getDistinctRotationsCount();
+            Rotation[] iboxRotations = ibox.getDistinctRotations();
+
+            int[] possibleHeights = new int[iboxRotationsCount];
+            int[] possibleWidths  = new int[iboxRotationsCount];
+            int[] possibleLengths = new int[iboxRotationsCount];
+
+            for (int j = 0; j < iboxRotationsCount; j++) {
+                possibleHeights[j] = ibox.height(iboxRotations[j]);
+                possibleWidths[j]  = ibox.width(iboxRotations[j]);
+                possibleLengths[j] = ibox.length(iboxRotations[j]);
             }
 
-            rot[i] = model.intVar("rot_" + i, 0, BOX_POSSIBLE_ROTATIONS - 1);
+            rot[i] = model.intVar("rot_" + i, 0, iboxRotationsCount - 1);
 
-            cH[i] = model.intVar("chosenHeight_" + i, 0, boxes.get(i).max);
-            cW[i] = model.intVar("chosenWidth_" + i, 0, boxes.get(i).max);
-            cL[i] = model.intVar("chosenLength_" + i, 0, boxes.get(i).max);
+            cH[i] = model.intVar("chosenHeight_" + i, ibox.min, ibox.max);
+            cW[i] = model.intVar("chosenWidth_" + i, ibox.min, ibox.max);
+            cL[i] = model.intVar("chosenLength_" + i, ibox.min, ibox.max);
 
             model.element(cH[i], possibleHeights, rot[i]).post();
-            model.element(cW[i],  possibleWidths,  rot[i]).post();
+            model.element(cW[i], possibleWidths,  rot[i]).post();
             model.element(cL[i], possibleLengths, rot[i]).post();
 
             // Container Bounds
@@ -152,6 +175,7 @@ public final class Box {
             }
         }
 
+
         Solver solver = model.getSolver();
 
         if (limitMs != DISABLE_TIME_LIMIT) {
@@ -166,7 +190,7 @@ public final class Box {
     }
 
     private void validateDimension(int val) {
-        if (val < 0 ) {
+        if (val <= 0 ) {
             throw new IllegalArgumentException("Box dimensions cannot be negative");
         }
     }
@@ -179,7 +203,7 @@ public final class Box {
         return length;
     }
 
-    private int height(Rotation r) {
+     int height(Rotation r) {
         switch (r) {
             case R0, R1 -> {
                 return height;
@@ -194,7 +218,7 @@ public final class Box {
         }
     }
 
-    private int length(Rotation r) {
+     int length(Rotation r) {
         switch (r) {
             case R0, R3 -> {
                 return length;
@@ -209,7 +233,7 @@ public final class Box {
         }
     }
 
-    private int width(Rotation r) {
+     int width(Rotation r) {
         switch (r) {
             case R0, R4 -> {
                 return width;
@@ -224,8 +248,40 @@ public final class Box {
         }
     }
 
+    private int getDistinctRotationsCount() {
+        if (width == height && height == length) {
+            return 1;
+        }
+
+        if (width == height || width == length || height == length) {
+            return 3;
+        }
+
+        return 6;
+    }
+
+    private Rotation[] getDistinctRotations() {
+        if (width == height && height == length) {
+            return IDENTITY;
+        }
+
+        if (width == height) {
+            return ROTATIONS_W_EQ_H;
+        }
+
+        if (width == length) {
+            return ROTATIONS_W_EQ_L;
+        }
+
+        if (height == length) {
+            return ROTATIONS_H_EQ_L;
+        }
+
+        return ROTATIONS;
+    }
+
     public int[] getDimensionsSortedAsc() {
-        return new int[]{min, med, max};
+        return dimSorted;
     }
 
 
@@ -235,7 +291,7 @@ public final class Box {
         return arr;
     }
 
-    private enum Rotation {
+    enum Rotation {
         R0,
         R1,
         R2,
