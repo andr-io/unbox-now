@@ -8,6 +8,14 @@ public class Main {
     private static final String ANSI_RED    = "\u001B[31m";
 
     public static void main(String[] args) {
+        run("aaaaaaaaaaaaa",
+            new Box(5, 5, 5),
+            List.of(new Box(1, 1, 1), new Box(1, 1, 1), new Box(1, 1, 1),
+                new Box(1, 1, 1), new Box(1, 1, 1), new Box(1, 1, 1),
+                new Box(1, 1, 1), new Box(1, 1, 1), new Box(1, 1, 3)),
+            true);
+
+
         run("Two slim boxes fit in 10x10x10",
             new Box(10, 10, 10),
             List.of(new Box(9, 1, 1), new Box(9, 1, 1)),
@@ -66,6 +74,8 @@ public class Main {
                 new Box(1, 1, 1), new Box(1, 1, 1), new Box(1, 1, 3), new Box(1, 1, 1), new Box(1, 2, 1),
                 new Box(2, 1, 2), new Box(2, 1, 1), new Box(1, 3, 1), new Box(1, 2, 1), new Box(1, 2, 1)),
             false);
+
+
 
         // --- Stress tests with 20 boxes ---
 
@@ -134,6 +144,17 @@ public class Main {
                 new Box(7, 7, 7), new Box(7, 7, 7), new Box(7, 7, 7), new Box(7, 7, 7)
             ),
             true);
+
+        run("20  boxes in 40x40x40, should NOT fit",
+            new Box(40, 40, 40),
+            List.of(
+                new Box(14, 14, 14), new Box(14, 14, 14), new Box(14, 14, 14), new Box(14, 14, 14),
+                new Box(14, 14, 14), new Box(14, 14, 14), new Box(14, 14, 14), new Box(14, 14, 14),
+                new Box(14, 14, 14), new Box(14, 14, 14), new Box(14, 14, 14), new Box(14, 14, 14),
+                new Box(14, 14, 14), new Box(14, 14, 14), new Box(14, 14, 14), new Box(14, 14, 14),
+                new Box(14, 14, 14), new Box(14, 14, 14), new Box(14, 14, 14), new Box(14, 14, 14)
+            ),
+            false);
 
     }
 

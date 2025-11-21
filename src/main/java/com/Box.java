@@ -35,6 +35,7 @@ public final class Box {
     private final int min;
 
     private final long volume;
+    private final int gcd;
 
     public Box(int width, int height, int length) {
         validateDimension(width);
@@ -47,6 +48,7 @@ public final class Box {
         this.volume = ((long) width) * height * length;
 
         dimSorted = sortAsc(width, height, length);
+        gcd = gcd(width, height, length);
 
         max = dimSorted[2];
         med = dimSorted[1];
@@ -60,7 +62,7 @@ public final class Box {
     }
 
     public boolean canTheseFitIn(List<Box> boxes) {
-        return _canTheseFitIn(boxes, DISABLE_TIME_LIMIT);
+        return _canTheseFitIn(boxes, DISABLE_TIME_LIMIT, false);
     }
 
     public boolean canTheseFitIn(List<Box> boxes, int limitMs) {
@@ -68,13 +70,14 @@ public final class Box {
             throw new IllegalArgumentException("limitMs must be a positive number");
         }
 
-        return _canTheseFitIn(boxes, limitMs);
+        return _canTheseFitIn(boxes, limitMs, false);
     }
 
-    private boolean _canTheseFitIn(List<Box> boxes, int limitMs) {
+    private boolean _canTheseFitIn(List<Box> boxes, int limitMs, boolean alreadyScaled) {
         // Quick check
         int minLengthSum = 0;
         long totalVolume = 0;
+        int boxesMaxDimension = 0;
 
         for (var box : boxes) {
             // Check if they fit "1 in 1"
@@ -84,6 +87,10 @@ public final class Box {
 
             minLengthSum += box.min;
             totalVolume += box.volume;
+
+            if (box.max > boxesMaxDimension) {
+                boxesMaxDimension = box.max;
+            }
         }
 
         // They fit individually, so if we stack them on the min and check
@@ -94,6 +101,61 @@ public final class Box {
         // If they have more volume we reject
         if (volume < totalVolume) {
             return false;
+        }
+
+        // If we slice the box into cubes that are the max dimension and we have more cubes than items then they fit
+        if ((width / boxesMaxDimension) *
+            (height / boxesMaxDimension) *
+            (length / boxesMaxDimension) >= boxes.size()) {
+            return true;
+        }
+
+        // Try multistacking;
+        {
+            var perimeterBoxes = new ArrayList<>(boxes);
+            perimeterBoxes.sort(Comparator.comparingLong(Box::dimSummedPartial).reversed());
+
+            int stackH = 0;
+            int stackMax = 0;
+            int curMax = max;
+
+            boolean allFits = true;
+
+            for (var box : perimeterBoxes) {
+                if (stackH + box.min > min) {
+                    curMax -= stackMax;
+                    stackH = 0;
+                    stackMax = 0;
+                }
+
+                if (curMax < box.max) {
+                    allFits = false;
+                    break;
+                }
+
+                if (stackH + box.min <= min) {
+                    stackH += box.min;
+
+                    if (stackMax < box.max) {
+                        stackMax = box.max;
+                    }
+                }
+            }
+
+            if (allFits) {
+                return true;
+            }
+        }
+
+        if (!alreadyScaled && gcd > 1) {
+            int scale = gcd(gcd, gcd(boxes.stream().mapToInt(b -> b.gcd).toArray()));
+
+            if (scale > 1) {
+                var newBoxes = boxes.stream().map(b -> b.scaleDown(scale)).toList();
+                return scaleDown(scale)._canTheseFitIn(newBoxes, limitMs, true);
+            }
+
+
         }
 
         // Bring out the big guns
@@ -218,6 +280,7 @@ public final class Box {
         return solved;
     }
 
+
     public int width() {
         return width;
     }
@@ -300,6 +363,47 @@ public final class Box {
         return dimSorted;
     }
 
+    private int dimSummedPartial() {
+        return width + height + length;
+    }
+
+    private Box scaleUp(int factor) {
+        return new Box(factor * width, factor * height, factor * length);
+    }
+
+    private Box scaleDown(int factor) {
+        if (gcd % factor != 0) {
+            throw new IllegalStateException("Cannot scale down by " + factor);
+        }
+
+        return new Box(width / factor, height / factor, length / factor);
+    }
+
+    private int gcd(int a, int b) {
+        if (b == 0) {
+            return a;
+        }
+
+        return gcd(b, a %b );
+    }
+
+    private int gcd(int a, int b, int c) {
+        return gcd(a, gcd(b, c));
+    }
+
+    private int gcd(int[] arr) {
+        int gcd = arr[0];
+
+        for (int i = 1; i < arr.length; i++) {
+            gcd = gcd(gcd, arr[i]);
+
+            if (gcd == 1) {
+                return 1;
+            }
+        }
+
+        return gcd;
+    }
 
     private static int[] sortAsc(int x, int y, int z) {
         int[] arr = {x, y ,z};
