@@ -422,5 +422,23 @@ public final class Box implements Comparable<Box> {
         return BOX_COMPARATOR.compare(this, o);
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        Box box = (Box) o;
+        return max == box.max && med == box.med && min == box.min;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = max;
+        result = 31 * result + med;
+        result = 31 * result + min;
+        return result;
+    }
+
     enum Rotation { R0, R1, R2, R3, R4, R5,}
 }
