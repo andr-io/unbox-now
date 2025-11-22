@@ -12,7 +12,7 @@ import java.util.List;
 
 import static com.Box.Rotation.*;
 
-public final class Box {
+public final class Box implements Comparable<Box> {
     // Config
     private static final int DISABLE_TIME_LIMIT = -1;
 
@@ -22,6 +22,12 @@ public final class Box {
     private static final Rotation[] ROTATIONS_W_EQ_H = {R0, R1, R4};
     private static final Rotation[] ROTATIONS_W_EQ_L = {R0, R2, R3};
     private static final Rotation[] ROTATIONS_H_EQ_L = {R0, R1, R3};
+
+    private static final Comparator<Box> BOX_COMPARATOR =
+        Comparator.comparingLong((Box b) -> b.volume)
+                  .thenComparingInt(b -> b.max)
+                  .thenComparingInt(b -> b.med)
+                  .thenComparingInt(b -> b.min);
 
     // Caches
     private final int[] dimSorted;
@@ -160,7 +166,7 @@ public final class Box {
 
         // Bring out the big guns
         boxes = new ArrayList<>(boxes);
-        boxes.sort(Comparator.comparingLong(Box::volume).reversed());
+        boxes.sort(BOX_COMPARATOR.reversed());
 
         int n = boxes.size();
         Model model = new Model("Boxes into box");
@@ -409,6 +415,11 @@ public final class Box {
         int[] arr = {x, y ,z};
         Arrays.sort(arr);
         return arr;
+    }
+
+    @Override
+    public int compareTo(Box o) {
+        return BOX_COMPARATOR.compare(this, o);
     }
 
     enum Rotation { R0, R1, R2, R3, R4, R5,}
